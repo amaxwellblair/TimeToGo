@@ -1,0 +1,6 @@
+CREATE TABLE JOBS(
+  ID SERIAL NOT NULL,
+  NAME varchar,
+  SKILL_ID int,
+  PRIMARY KEY (ID)
+);

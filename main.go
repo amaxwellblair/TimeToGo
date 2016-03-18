@@ -8,7 +8,7 @@ import (
 )
 
 func newRouter() *mux.Router {
-	h := handler.Handler{}
+	h := handlers.Handler{}
 	r := mux.NewRouter()
 	r.HandleFunc("/", h.GetRootHandler)
 	return r

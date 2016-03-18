@@ -1,4 +1,4 @@
-package handler
+package handlers
 
 import (
 	"net/http"
@@ -31,7 +31,3 @@ func TestAPI_getMessageHandler(t *testing.T) {
 	// h := Handler{}
 	// w := NewRecorder("GET", h.getMessageHandler)
 }
-
-// func TestAPI_messageHandler() {
-//
-// }
