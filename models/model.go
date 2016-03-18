@@ -114,3 +114,48 @@ func (s *Store) JobsBySkill(skill string) ([]Job, error) {
 	}
 	return jobs, nil
 }
+
+// SkillsByJob returns jobs that have a particular skill
+func (s *Store) SkillsByJob(job string) ([]Skill, error) {
+	sess := s.DB.NewSession(nil)
+	var skills []Skill
+	_, err := sess.
+		Select("*").
+		From("jobs").
+		Where("jobs.name = ?", job).
+		Join("categories", "categories.job_id = jobs.id").
+		Join("skills", "skills.id = categories.skill_id").
+		Load(&skills)
+	if err != nil {
+		return nil, err
+	}
+	return skills, nil
+}
+
+// Jobs returns all jobs
+func (s *Store) Jobs() ([]Job, error) {
+	sess := s.DB.NewSession(nil)
+	var jobs []Job
+	_, err := sess.
+		Select("*").
+		From("jobs").
+		Load(&jobs)
+	if err != nil {
+		return nil, err
+	}
+	return jobs, nil
+}
+
+// Skills returns all jobs
+func (s *Store) Skills() ([]Skill, error) {
+	sess := s.DB.NewSession(nil)
+	var skills []Skill
+	_, err := sess.
+		Select("*").
+		From("skills").
+		Load(&skills)
+	if err != nil {
+		return nil, err
+	}
+	return skills, nil
+}
