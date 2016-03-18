@@ -6,35 +6,146 @@ import "testing"
 const DATASOURCETEST = "user=maxwell dbname=careerCrawl_test sslmode=disable"
 
 func TestStore_Open(t *testing.T) {
-	s := NewStore()
-	if err := s.Open(DATASOURCETEST); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	s := NewTestStore()
+	s.MustOpen()
 	defer s.Close()
-	if err := s.DB.Ping(); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
 }
 
 func TestStore_CreateJob(t *testing.T) {
-	s := NewStore()
-	if err := s.Open(DATASOURCETEST); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	defer s.Close()
+	s := NewTestStore()
+	s.MustOpen()
+	defer s.CleanDatabase()
 
 	if err := s.CreateJob(&Job{
-		Name:       "Hacker",
-		Categories: []string{"python", "ruby", "c"},
+		Name: "Hacker",
 	}); err != nil {
 		t.Fatal(err)
 	}
-	sess := s.DB.NewSession(nil)
-	defer sess.DeleteFrom("jobs").Where("name = ?", "Hacker").Exec()
 
 	if job, err := s.Job("Hacker"); err != nil {
 		t.Fatal(err)
 	} else if job.Name != "Hacker" {
 		t.Fatalf("unexpected name: %s", job.Name)
+	}
+}
+
+func TestStore_CreateSkill(t *testing.T) {
+	s := NewTestStore()
+	s.MustOpen()
+	defer s.Close()
+	defer s.CleanDatabase()
+
+	if err := s.CreateSkill(&Skill{
+		Name: "ruby",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if skill, err := s.Skill("ruby"); err != nil {
+		t.Fatal(err)
+	} else if skill.Name != "ruby" {
+		t.Fatalf("unexpected name: %s", skill.Name)
+	}
+
+}
+
+func TestStore_CreateCategory(t *testing.T) {
+	s := NewTestStore()
+	s.MustOpen()
+	defer s.Close()
+	defer s.CleanDatabase()
+
+	if err := s.CreateSkill(&Skill{
+		Name: "ruby",
+	}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateJob(&Job{
+		Name: "Hacker",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if j, err := s.Job("Hacker"); err != nil {
+		t.Fatal(err)
+	} else if skill, err := s.Skill("ruby"); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateCategory(&Category{
+		JobID:   j.ID,
+		SkillID: skill.ID,
+	}); err != nil {
+		t.Fatal(err)
+	} else if jobs, err := s.JobsBySkill("ruby"); err != nil {
+		t.Fatal(err)
+	} else if jobs[0].Name != "Hacker" {
+		t.Fatalf("unexpected name: %s", jobs[0].Name)
+	}
+}
+
+func TestStore_CreateCategory_MultipleSkills(t *testing.T) {
+	s := NewTestStore()
+	s.MustOpen()
+	defer s.Close()
+	defer s.CleanDatabase()
+
+	if err := s.CreateSkill(&Skill{
+		Name: "ruby",
+	}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateSkill(&Skill{
+		Name: "go",
+	}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateJob(&Job{
+		Name: "Hacker",
+	}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateJob(&Job{
+		Name: "Coder",
+	}); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateJob(&Job{
+		Name: "QA",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if j, err := s.Job("Hacker"); err != nil {
+		t.Fatal(err)
+	} else if skill, err := s.Skill("ruby"); err != nil {
+		t.Fatal(err)
+	} else if err := s.CreateCategory(&Category{
+		JobID:   j.ID,
+		SkillID: skill.ID,
+	}); err != nil {
+		t.Fatal(err)
+	} else if jobs, err := s.JobsBySkill("ruby"); err != nil {
+		t.Fatal(err)
+	} else if jobs[0].Name != "Hacker" {
+		t.Fatalf("unexpected name: %s", jobs[0].Name)
+	}
+}
+
+type TestStore struct {
+	Store
+}
+
+func NewTestStore() *TestStore {
+	return &TestStore{}
+}
+
+func (t *TestStore) MustOpen() {
+	if err := t.Open(DATASOURCETEST); err != nil {
+		panic(err)
+	}
+	if err := t.DB.Ping(); err != nil {
+		panic(err)
+	}
+}
+
+func (t *TestStore) CleanDatabase() {
+	table := []string{"categories", "jobs", "skills"}
+	for i := 0; i < len(table); i++ {
+		sess := t.DB.NewSession(nil)
+		sess.DeleteFrom(table[i]).Exec()
 	}
 }
