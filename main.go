@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/amaxwellblair/slackdown/handlers"
+	"github.com/amaxwellblair/TimeToGo/handlers"
 	"github.com/gorilla/mux"
 )
 

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/amaxwellblair/slackdown/models"
+	"github.com/amaxwellblair/TimeToGo/models"
 )
 
 // Handler will be a wrapper for all handler functions
