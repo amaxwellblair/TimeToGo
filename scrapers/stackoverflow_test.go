@@ -5,13 +5,32 @@ import (
 	"testing"
 )
 
-func TestStackOverflow_ParsePosts(t *testing.T) {
+func TestStackOverflow_ParsePage(t *testing.T) {
 	s := NewTestStackOverflow()
-	page, err := s.GetXMLTest()
+	xml, err := s.GetXMLTest()
 	if err != nil {
 		t.Fatal(err)
 	}
-	s.ParseXML(page)
+	page, err := s.ParsePage(xml)
+	title := "Hackers wanted - Leidenschaftliche Programmierer / Entwickler (m/w) gesucht. at freiheit.com technologies gmbh (Hamburg, Deutschland)"
+	categories := []string{"java", "scala", "javascript", "clojure", "go"}
+	item := page.Items[0]
+
+	if item.Title != title {
+		t.Fatalf("unexpected title: %s", title)
+	}
+	var comp bool
+	for _, actual := range item.Categories {
+		comp = false
+		for _, expect := range categories {
+			if actual == expect {
+				comp = true
+			}
+		}
+		if comp != true {
+			t.Fatalf("unexpected category: %s", actual)
+		}
+	}
 }
 
 type TestStackOverflow struct {
