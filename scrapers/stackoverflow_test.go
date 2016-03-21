@@ -1,8 +1,11 @@
-package main
+package main_test
 
 import (
 	"os"
+	"reflect"
 	"testing"
+
+	"github.com/amaxwellblair/TimeToGo/scrapers"
 )
 
 func TestStackOverflow_ParsePage(t *testing.T) {
@@ -10,33 +13,24 @@ func TestStackOverflow_ParsePage(t *testing.T) {
 	xml, err := s.GetXMLTest()
 	if err != nil {
 		t.Fatal(err)
+	} else if err := s.ParsePage(xml); err != nil {
+		t.Fatal(err)
 	}
-	page, err := s.ParsePage(xml)
 	title := "Hackers wanted - Leidenschaftliche Programmierer / Entwickler (m/w) gesucht. at freiheit.com technologies gmbh (Hamburg, Deutschland)"
 	categories := []string{"java", "scala", "javascript", "clojure", "go"}
-	item := page.Items[0]
+	item := s.Pages[0].Items[0]
 
 	if item.Title != title {
 		t.Fatalf("unexpected title: %s", title)
-	}
-	var comp bool
-	for _, actual := range item.Categories {
-		comp = false
-		for _, expect := range categories {
-			if actual == expect {
-				comp = true
-			}
-		}
-		if comp != true {
-			t.Fatalf("unexpected category: %s", actual)
-		}
+	} else if reflect.DeepEqual(categories, item.Categories) != true {
+		t.Fatalf("unexpected categories: %s", item.Categories)
 	}
 }
 
 type TestStackOverflow struct {
 	url string
 	tag string
-	StackOverflow
+	main.StackOverflow
 }
 
 func NewTestStackOverflow() *TestStackOverflow {

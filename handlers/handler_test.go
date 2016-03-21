@@ -1,9 +1,11 @@
-package handlers
+package handlers_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/amaxwellblair/TimeToGo/handlers"
 )
 
 type mockDB interface {
@@ -20,7 +22,7 @@ func NewRecorder(method string, handlerFunc func(w http.ResponseWriter, r *http.
 }
 
 func TestAPI_GetRootHandler(t *testing.T) {
-	h := Handler{}
+	h := handlers.Handler{}
 	w := NewRecorder("GET", h.GetRootHandler)
 	if w.Body.String() != "" {
 		t.Fatalf("unexpected body: %s", w.Body.String())

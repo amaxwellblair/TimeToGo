@@ -65,7 +65,7 @@ type Skill struct {
 func (s *Store) CreateSkill(skill *Skill) error {
 	sess := s.DB.NewSession(nil)
 	_, err := sess.InsertInto("skills").Columns("name").Record(skill).Exec()
-	if err != nil {
+	if err != nil && err.Error() != "pq: duplicate key value violates unique constraint \"skills_name_key\"" {
 		return err
 	}
 	return nil
@@ -158,4 +158,42 @@ func (s *Store) Skills() ([]Skill, error) {
 		return nil, err
 	}
 	return skills, nil
+}
+
+// Item interface serves as a generic for item objects
+type Item interface {
+	GetTitle() string
+	GetCategories() []string
+	GetDescription() string
+}
+
+// ItemExtract will extract Job and Skill data from an Item
+func (s *Store) ItemExtract(i Item) error {
+	if err := s.CreateJob(&Job{
+		Name: i.GetTitle(),
+	}); err != nil {
+		return err
+	}
+	j, err := s.Job(i.GetTitle())
+	if err != nil {
+		return err
+	}
+	for _, category := range i.GetCategories() {
+		if err := s.CreateSkill(&Skill{
+			Name: category,
+		}); err != nil {
+			return err
+		}
+		skill, err := s.Skill(category)
+		if err != nil {
+			return err
+		}
+		if err := s.CreateCategory(&Category{
+			JobID:   j.ID,
+			SkillID: skill.ID,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }

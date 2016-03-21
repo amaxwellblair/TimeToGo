@@ -11,86 +11,88 @@ import (
 // StackOverflow represents the StackOverflow API
 type StackOverflow struct {
 	url   string
-	tag   string
-	Pages []*StackOverflowPage
-}
-
-// StackOverflowPage represents a single page
-type StackOverflowPage struct {
-	Items []*StackOverflowItem
-}
-
-// StackOverflowItem represents a single item
-type StackOverflowItem struct {
-	Title       string
-	Categories  []string
-	Description string
+	tags  []string
+	Pages []*Page
 }
 
 // NewStackOverflow returns a new instance of the StackOverflow API
-func NewStackOverflow(tag string) *StackOverflow {
+func NewStackOverflow(tags []string) *StackOverflow {
 	return &StackOverflow{
-		url: "http://stackoverflow.com/jobs/feed?tags=",
-		tag: tag,
+		url:  "http://stackoverflow.com/jobs/feed?tags=",
+		tags: tags,
 	}
 }
 
 // GetXML scrapes RSS data from stackoverflow
-func (s *StackOverflow) GetXML() (*http.Response, error) {
-	return http.Get(s.url + s.tag)
+func (s *StackOverflow) GetXML(index int) (*http.Response, error) {
+	return http.Get(s.url + s.tags[index])
 }
 
-// ExtractJobs pulls data from StackOverflow and places them in a database
-func (s *StackOverflow) ExtractJobs() error {
-	resp, err := s.GetXML()
-	if err != nil {
-		return nil
-	}
-	// Extract the response body
-	page, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
+// GetPages returns the APIs pages
+func (s *StackOverflow) GetPages() []*Page {
+	return s.Pages
+}
 
-	s.ParsePage(page)
+// ExtractData pulls data from StackOverflow and places them in a database
+func (s *StackOverflow) ExtractData() error {
+	for i := 0; i < len(s.tags); i++ {
+		// Request data from StackOverflow
+		resp, err := s.GetXML(i)
+		if err != nil {
+			return nil
+		}
+
+		// Extract the response body
+		page, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		if err := s.ParsePage(page); err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
 // ParsePage parses scraped RSS data from stackoverflow
-func (s *StackOverflow) ParsePage(data []byte) (*StackOverflowPage, error) {
+func (s *StackOverflow) ParsePage(data []byte) error {
 	// Parse the web page
 	doc, err := gokogiri.ParseXml(data)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer doc.Free()
 
-	var page StackOverflowPage
+	var page Page
 
 	// Find raw XML items
 	items, err := doc.Root().Search("/rss/channel/item")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Parse each of the XML items
 	for _, item := range items {
 		i, err := s.ParseItem(item)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		page.Items = append(page.Items, i)
 	}
 
-	return &page, nil
+	// Place the completed page into the API
+	s.Pages = append(s.Pages, &page)
+
+	return nil
 }
 
 // ParseItem parses XML data into items
-func (s *StackOverflow) ParseItem(node xml.Node) (*StackOverflowItem, error) {
+func (s *StackOverflow) ParseItem(node xml.Node) (*Item, error) {
 	// Parse different data points based on path
-	var item *StackOverflowItem
+	var item *Item
 	paths := []string{"category", "title", "description"}
 
 	data := make(map[string][]string)
@@ -100,7 +102,7 @@ func (s *StackOverflow) ParseItem(node xml.Node) (*StackOverflowItem, error) {
 			return nil, err
 		}
 	}
-	item = &StackOverflowItem{
+	item = &Item{
 		Title:       data["title"][0],
 		Categories:  data["category"],
 		Description: data["description"][0],
