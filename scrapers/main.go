@@ -1,9 +1,29 @@
 package main
 
-import "github.com/amaxwellblair/TimeToGo/models"
+import (
+	"fmt"
+
+	"github.com/amaxwellblair/TimeToGo/keys"
+	"github.com/amaxwellblair/TimeToGo/models"
+)
 
 func main() {
+	// Create new API structs
+	a := NewStackOverflow([]string{"golang", "ruby", "python", "clojure", "c", "c++"})
 
+	// Open the database
+	s := models.NewStore()
+	if err := s.Open(keys.DATASOURCEDEV); err != nil {
+		fmt.Printf("unexpected error: %s\n", err)
+		return
+	}
+
+	// Scrape the APIs for jobs data
+	if err := Scrape(a, s); err != nil {
+		fmt.Printf("unexpected error: %s\n", err)
+		return
+	}
+	fmt.Println("The scraper has successfully consumed the API(s)")
 }
 
 type itemExtractor interface {
@@ -12,11 +32,13 @@ type itemExtractor interface {
 
 // Scrape data from APIs
 func Scrape(a API, s itemExtractor) error {
+	// Extract data from API and place in API struct
 	if err := a.ExtractData(); err != nil {
 		return err
 	}
 	pages := a.GetPages()
 
+	// Iterate through each page and place the items into the database
 	for _, page := range pages {
 		items := page.Items
 		for _, item := range items {
